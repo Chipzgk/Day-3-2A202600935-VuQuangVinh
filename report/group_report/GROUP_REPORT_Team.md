@@ -1,4 +1,4 @@
-# Group Report: Lab 3 - Production-Grade Agentic System
+# Báo cáo Nhóm: Lab 3 - Hệ thống Agent cấp độ Thực tiễn (Production-Grade)
 
 - **Team Name**: Kẻ lót đường
 - **Team Members**: Vũ Quang Vinh, Hoàng Đức Dũng, Đinh Văn Anh Khôi, Đoàn Công Phú
@@ -6,73 +6,71 @@
 
 ---
 
-## 1. Executive Summary
+## 1. Tóm tắt Thực thi (Executive Summary)
 
-*Brief overview of the agent's goal and success rate compared to the baseline chatbot.*
+*Tổng quan về mục tiêu của Agent và tỷ lệ thành công so với Chatbot cơ bản.*
 
-- **Success Rate**: 29.4% aggregate reliability on 17 test cases (Baseline v1) -> 100% stable runtime after v2 Guardrails implementation.
-- **Key Outcome**: The baseline agent successfully proved that an LLM can orchestrate local Python tools to synthesize physical `.wav` files. However, the system required strict pacing (throttling) and prompt constraints to survive Google API rate limits and prevent infinite loops.
+- **Tỷ lệ thành công**: 29.4% độ tin cậy trên 17 kịch bản kiểm thử (Ở phiên bản Baseline v1) -> Đạt 100% thời gian chạy ổn định sau khi áp dụng các rào chắn (Guardrails) ở bản v2.
+- **Kết quả chính**: Hệ thống Agent cơ bản đã chứng minh được rằng LLM có khả năng điều phối các công cụ Python cục bộ để tổng hợp ra file vật lý `.wav`. Tuy nhiên, hệ thống cần được áp đặt các rào cản về nhịp độ gửi yêu cầu (throttling) và giới hạn Prompt nghiêm ngặt để "sống sót" qua giới hạn API của Google và ngăn chặn vòng lặp vô hạn.
 
 ---
 
-## 2. System Architecture & Tooling
+## 2. Kiến trúc Hệ thống & Công cụ
 
-### 2.1 ReAct Loop Implementation
-The system utilizes a 5-step ReAct architecture (`max_iterations=5`). The LLM reads the user intent (`Thought`), formulates a JSON payload to call a tool (`Action`), the Python backend executes the tool and returns the file path (`Observation`), and the LLM closes the loop (`Final Answer`).
+### 2.1 Cấu trúc Vòng lặp ReAct
+Hệ thống sử dụng kiến trúc ReAct 5 bước (`max_iterations=5`). LLM đọc ý định người dùng (`Thought`), cấu trúc một tệp JSON để gọi công cụ (`Action`), backend Python thực thi và trả về đường dẫn file (`Observation`), sau đó LLM đóng vòng lặp (`Final Answer`).
 
-### 2.2 Tool Definitions (Inventory)
-| Tool Name | Input Format | Use Case |
+### 2.2 Danh mục Công cụ (Tools Inventory)
+| Tên Tool | Định dạng Input | Use Case (Mục đích sử dụng) |
 | :--- | :--- | :--- |
-| `create_midi` | `json` | Generates a structural `.mid` notation file based on tempo, key, and bars. |
-| `midi_to_wav` | `json` | Synthesizer that reads `.mid` and applies a waveform to output audio. |
-| `create_music_wav` | `json` | **(Active Tool)** All-in-one wrapper that combines MIDI generation and WAV rendering to reduce LLM reasoning steps. |
+| `create_midi` | `json` | Tạo file cấu trúc nốt nhạc `.mid` dựa trên nhịp điệu, âm giai và số ô nhịp. |
+| `midi_to_wav` | `json` | Bộ kết xuất âm thanh (Synthesizer) đọc file `.mid` và áp dụng sóng âm để xuất audio. |
+| `create_music_wav` | `json` | **(Tool đang kích hoạt)** Công cụ All-in-one gộp chung cả bước tạo MIDI và render WAV để giảm số bước suy luận của LLM. |
 
-### 2.3 LLM Providers Used
-- **Primary**: `gemini-2.5-flash` (via Google AI Studio `v1beta` endpoint).
-- **Secondary (Backup)**: Direct Python Backend Execution (Disaster Recovery bypass when API is down).
-
----
-
-## 3. Telemetry & Performance Dashboard
-
-*Analyze the industry metrics collected during the final test run.*
-
-- **Average Latency (P50)**: 2,939.3 ms per reasoning loop.
-- **Max Latency (P99)**: > 23,000 ms (when HTTP 429 Exponential Backoff is triggered).
-- **Average Tokens per Task**: ~235 Prompt Tokens / ~85 Completion Tokens (Total: 3,998 Prompt / 1,451 Completion over 17 runs).
-- **Total Cost of Test Suite**: $0.00 (Utilized Google Free Tier).
+### 2.3 Các nhà cung cấp LLM
+- **Mô hình chính**: `gemini-2.5-flash` (thông qua endpoint `v1beta` của Google AI Studio).
+- **Mô hình dự phòng**: Gọi trực tiếp Backend Python (Cơ chế Disaster Recovery khi API sập).
 
 ---
 
-## 4. Root Cause Analysis (RCA) - Failure Traces
+## 3. Bảng Phân tích Hiệu năng (Telemetry Dashboard)
 
-*Deep dive into why the agent failed.*
+*Phân tích các chỉ số công nghiệp thu thập được trong lần chạy kiểm thử.*
 
-### Case Study: Infinite Loop (Timeout / Max Steps Exceeded)
+- **Độ trễ trung bình (P50)**: 2,939.3 ms mỗi vòng lặp suy luận.
+- **Độ trễ tối đa (P99)**: > 23,000 ms (Xảy ra khi thuật toán chống nghẽn Exponential Backoff kích hoạt).
+- **Số Token trung bình mỗi tác vụ**: ~235 Prompt Tokens / ~85 Completion Tokens (Tổng: 3,998 Prompt / 1,451 Completion qua 17 lần chạy).
+- **Tổng chi phí kiểm thử**: $0.00 (Sử dụng Google Free Tier).
+
+---
+
+## 4. Phân tích Nguyên nhân Gốc rễ (RCA) - Các ca thất bại
+
+### Case Study: Vòng lặp vô hạn (Lỗi Timeout / Max Steps Exceeded)
 - **Input**: "Hãy làm cho tôi một đoạn nhạc lofi dài 8 bars, nhịp điệu chậm rãi 80 BPM, tone C."
-- **Observation**: Agent successfully called `create_music_wav` and system returned `Thành công. Kết quả file lưu tại: outputs/lofi_chill.wav`.
-- **Root Cause**: The agent failed to output `Final Answer`. Due to Context Drift in longer token windows, the LLM forgot to terminate the loop and hallucinated new tasks, hitting the iteration cap.
+- **Observation**: Agent gọi thành công `create_music_wav` và hệ thống trả về `Thành công. Kết quả file lưu tại: outputs/lofi_chill.wav`.
+- **Nguyên nhân gốc rễ (Root Cause)**: Agent không xuất lệnh `Final Answer`. Do hiện tượng **Trôi dạt ngữ cảnh (Context Drift)** khi lượng token hội thoại tăng lên, LLM quên mất việc phải dừng vòng lặp và tự "ảo giác" ra các tác vụ mới, dẫn đến việc chạm ngưỡng giới hạn số bước.
 
 ---
 
-## 5. Ablation Studies & Experiments
+## 5. Nghiên cứu & Thử nghiệm
 
-### Experiment 1: Prompt v1 vs Prompt v2 (Strict Constraints)
-- **Diff**: Added rule: "Nếu Observation có chữ 'Thành công...', BẮT BUỘC KHÔNG gọi tool nữa và phải dùng Final Answer."
-- **Result**: Reduced infinite loop `Timeout` errors by 100%, stabilizing the system to a Zero-Crash runtime.
+### Thử nghiệm 1: Prompt v1 so với Prompt v2 (Quy tắc thép)
+- **Khác biệt**: Bổ sung rào chắn vào Prompt: *"Nếu Observation có chữ 'Thành công...', BẮT BUỘC KHÔNG gọi tool nữa và phải dùng Final Answer."*
+- **Kết quả**: Giảm 100% lỗi lặp vô hạn `Timeout`, đưa hệ thống về trạng thái vận hành Zero-Crash (Không có lỗi crash).
 
-### Experiment 2 (Bonus): Chatbot vs Agent
-| Case | Chatbot Result | Agent Result | Winner |
+### Thử nghiệm 2 (Điểm thưởng): Chatbot vs Agent
+| Kịch bản | Kết quả Chatbot | Kết quả Agent | Phân loại Tối ưu |
 | :--- | :--- | :--- | :--- |
-| Simple Q (Music Theory) | Correct (Fast & Cheap) | Over-engineered (High Latency) | **Chatbot** |
-| Multi-step (Generate Audio) | Hallucinated text only | Correct (Rendered .wav) | **Agent** |
+| Tra cứu Nhạc lý | Chính xác (Nhanh & Rẻ) | Phức tạp hóa vấn đề (Độ trễ cao) | **Chatbot** |
+| Đa bước (Tạo Audio) | Chỉ trả về chữ (Thất bại) | Chính xác (Tạo file .wav) | **Agent** |
 
 ---
 
-## 6. Production Readiness Review
+## 6. Đánh giá Mức độ Sẵn sàng Triển khai (Production Readiness)
 
-*Considerations for taking this system to a real-world environment.*
+*Các yếu tố cần cân nhắc khi đưa hệ thống này ra môi trường thực tế.*
 
-- **Security**: Implement JSON schema validation (e.g., Pydantic) to strictly sanitize the `Action Input` before passing it to the local `create_music_wav` tool.
-- **Guardrails**: Limit `max_iterations=5` and insert a 2.5s `time.sleep()` between loops to prevent bursting the API rate limits.
-- **Scaling**: Implement an intent-based `SmartRouter` at the API gateway to direct simple queries to the Chatbot and complex synthesis requests to the ReAct Agent, optimizing both cost and UX.
+- **Bảo mật**: Cần áp dụng xác thực JSON schema (VD: dùng Pydantic) để làm sạch `Action Input` trước khi đưa vào hàm Python cục bộ.
+- **Rào chắn (Guardrails)**: Giới hạn cứng `max_iterations=5` và chèn thêm `time.sleep(2.5)` giữa các vòng lặp để tránh làm sập API.
+- **Khả năng mở rộng**: Tích hợp bộ định tuyến `SmartRouter` tại cổng kết nối API để phân luồng: Các câu hỏi đơn giản đẩy cho Chatbot, các lệnh phức tạp đẩy cho ReAct Agent nhằm tối ưu chi phí và trải nghiệm người dùng.
