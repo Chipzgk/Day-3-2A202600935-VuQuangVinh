@@ -1,9 +1,9 @@
 %%writefile report/group_report/GROUP_REPORT_Team.md
 # Báo cáo Nhóm: Lab 3 - Hệ thống Agent cấp độ Thực tiễn (Production-Grade)
 
-- **Tên Nhóm**: AI Music Backend Team
-- **Thành viên**: Vũ Quang Vinh, [Nhập tên các thành viên khác]
-- **Ngày triển khai**: 01-06-2026
+- **Team Name**: Kẻ lót đường
+- **Team Members**: Vũ Quang Vinh, Hoàng Đức Dũng, Đinh Văn Anh Khôi, Đoàn Công Phú
+- **Deployment Date**: 2026-06-01
 
 ---
 
