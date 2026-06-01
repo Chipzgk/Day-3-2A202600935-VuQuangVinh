@@ -60,10 +60,13 @@ Hệ thống sử dụng kiến trúc ReAct 5 bước (`max_iterations=5`). LLM 
 - **Kết quả**: Giảm 100% lỗi lặp vô hạn `Timeout`, đưa hệ thống về trạng thái vận hành Zero-Crash (Không có lỗi crash).
 
 ### Thử nghiệm 2 (Điểm thưởng): Chatbot vs Agent
-| Kịch bản | Kết quả Chatbot | Kết quả Agent | Phân loại Tối ưu |
+| Phân loại | Câu lệnh (Test Case) | Kết quả Chatbot Baseline | Kết quả ReAct Agent |
 | :--- | :--- | :--- | :--- |
-| Tra cứu Nhạc lý | Chính xác (Nhanh & Rẻ) | Phức tạp hóa vấn đề (Độ trễ cao) | **Chatbot** |
-| Đa bước (Tạo Audio) | Chỉ trả về chữ (Thất bại) | Chính xác (Tạo file .wav) | **Agent** |
+| **Chatbot đủ tốt (1)** | *"Vòng hợp âm C - G - Am - F gồm những nốt nào?"* | **Tốt.** Trả lời ngay lập tức bằng văn bản. Tốc độ nhanh, chi phí rẻ. | **Tệ.** Có thể cố gắng dùng tool thừa thãi, tốn thời gian suy nghĩ, tốn token. |
+| **Chatbot đủ tốt (2)** | *"Giải thích sự khác nhau giữa nhịp 3/4 và 4/4."* | **Tốt.** Cung cấp kiến thức nhạc lý chuẩn xác trực tiếp. | Trả lời được nhưng tốc độ phản hồi (Latency) chậm hơn do phải đi qua vòng lặp ReAct. |
+| **Agent vượt trội (1)** | *"Tạo cho tôi một file âm thanh piano chơi vòng hợp âm C-G-Am-F."* | **Thất bại.** Chỉ nhả ra code, người dùng tay ngang không biết cách dùng. | **Tốt.** Tự phân tích tham số $\rightarrow$ Tự gọi tool `create_music_wav` $\rightarrow$ Trả file âm thanh vật lý. |
+| **Agent vượt trội (2)** | *"Tạo file .wav giai điệu bài Twinkle Twinkle Little Star."* | Sinh code dễ bị lỗi logic, user chạy bị lỗi sẽ bỏ cuộc. | **Tốt.** Nếu lúc chạy tool bị lỗi định dạng, Agent tự động đọc Observation, tự sửa lại tham số và chạy lại (Self-correct). |
+| **Agent vượt trội (3)** | *"Hãy làm cho tôi một bản nhạc lofi 8 bars, nhịp 80 BPM, tone C."* | **Từ chối.** Xin lỗi vì chỉ là mô hình văn bản (Text-only limit). | **Hoàn hảo.** Nhận diện đúng 100% các biến tham số JSON và kết xuất file `.wav` thành công. |
 
 ---
 
